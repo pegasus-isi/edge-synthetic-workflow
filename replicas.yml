@@ -1,0 +1,8 @@
+pegasus: '5.0'
+replicas:
+  - lfn: input.txt
+    pfns:
+      - {site: local, pfn: 'http://example.com/pegasus/input/f.a'}
+  - lfn: input2.txt
+    pfns:
+      - {site: local, pfn: 'http://example.com/pegasus/input/f.a2'}
