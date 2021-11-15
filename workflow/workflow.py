@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 import argparse
+import logging
 import sys
 from pathlib import Path
 from typing import List
 
 import yaml
 from Pegasus.api import *
+
+logging.basicConfig(level=logging.DEBUG)
 
 def parse_args(args: List[str] = sys.argv[1:]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Synthetic workflow")
@@ -156,15 +159,17 @@ if __name__=="__main__":
             output_file_name = "{}.txt".format(job_id)
 
             j = Job(keg, _id=job_id)\
-                    .add_args("-T", runtime, "-i", lfn, "-o", "{}={}M".format(output_file_name, output_file_size))\
                     .add_outputs(output_file_name, stage_out=False)
 
             wf.add_jobs(j)
 
             if level == 1:
-                j.add_inputs(lfn)
+                j.add_inputs(lfn)\
+                    .add_args("-T", runtime, "-i", lfn, "-o", "{}={}M".format(output_file_name, output_file_size))
             else:
-                j.add_inputs("{}_{}.txt".format(level-1, col))
+                input_file = "{}_{}.txt".format(level-1,col)
+                j.add_inputs(input_file)\
+                    .add_args("-T", runtime, "-i", input_file, "-o", "{}={}M".format(output_file_name, output_file_size))\
 
         if current_output_file_size_idx != len(args.output_sizes) - 1:
             current_output_file_size_idx += 1
