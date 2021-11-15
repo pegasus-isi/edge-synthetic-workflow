@@ -82,6 +82,7 @@ def parse_args(args: List[str] = sys.argv[1:]) -> argparse.Namespace:
                 "--plot",
                 type=str,
                 choices=["pdf", "png"],
+                default=None,
                 help="Generate workflow diagram as workflow.<pdf | png>"
             )
 
@@ -111,10 +112,12 @@ if __name__=="__main__":
                 REPLICAS[input_file["lfn"]] = input_file["pfns"][0]
 
     # check for job mapping file
-    JOB_MAPPING_FILE = None
+    JOB_MAPPINGS = None
     if args.job_mapping:
         JOB_MAPPING_FILE = Path("job-machine-mapping.yml")
         assert JOB_MAPPING_FILE.exists()
+        with JOB_MAPPING_FILE.open("r") as f:
+            JOB_MAPPINGS = yaml.load(f, Loader=yaml.Loader)
 
     ### Properties ############################################################
     props = Properties()
@@ -154,7 +157,7 @@ if __name__=="__main__":
 
             j = Job(keg, _id=job_id)\
                     .add_args("-T", runtime, "-i", lfn, "-o", "{}={}M".format(output_file_name, output_file_size))\
-                    .add_outputs(output_file_name)
+                    .add_outputs(output_file_name, stage_out=False)
 
             wf.add_jobs(j)
 
@@ -163,20 +166,37 @@ if __name__=="__main__":
             else:
                 j.add_inputs("{}_{}.txt".format(level-1, col))
 
-        if current_output_file_size_idx < len(args.output_sizes) - 1:
+        if current_output_file_size_idx != len(args.output_sizes) - 1:
             current_output_file_size_idx += 1
+            output_file_size = args.output_sizes[current_output_file_size_idx]
 
-        if current_runtime_idx < len(args.runtime) - 1:
+        if current_runtime_idx != len(args.runtime) - 1:
             current_runtime_idx += 1
+            runtime = args.runtime[current_runtime_idx]
 
     merge_job = Job(keg, _id="merge")\
                     .add_args("-T", runtime, "-o", "merge.txt={}M".format(output_file_size))\
                     .add_inputs(*["{}_{}.txt".format(args.height-1, i) for i in range(1, len(REPLICAS)+1)])\
-                    .add_outputs("merge.txt")
+                    .add_outputs("merge.txt", stage_out=True)
     wf.add_jobs(merge_job)
 
+    # map jobs to machines
+    if JOB_MAPPINGS:
+        for job_id, machine_id in JOB_MAPPINGS.items():
+            print(job_id)
+            if job_id in wf.jobs:
+                wf.jobs[job_id].add_condor_profile(requirements="MACHINE_ID == \"{}\"".format(machine_id))
+            else:
+                raise RuntimeError("job id: {} not found in workflow when trying to assign to machine".format(
+                    job_id))
+
     wf.write()
-    wf.graph(include_files=True, no_simplify=True, label="xform-id", output="workflow.png")
+    
+    if args.plot:
+        wf.graph(include_files=True, no_simplify=True, label="xform-id", output="workflow.png")
+
+    if args.submit:
+        wf.plan(submit=True, force=True)
 
     
     
