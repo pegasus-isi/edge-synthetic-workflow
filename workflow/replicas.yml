@@ -1,0 +1,18 @@
+x-pegasus:
+  apiLang: python
+  createdBy: ryantanaka
+  createdOn: 11-15-21T15:15:31Z
+pegasus: '5.0'
+replicas:
+- lfn: input1.txt
+  pfns:
+  - site: local
+    pfn: /Users/ryantanaka/ISI/edge-synthetic-workflow/workflow/inputs/input1.txt
+- lfn: input2.txt
+  pfns:
+  - site: local
+    pfn: /Users/ryantanaka/ISI/edge-synthetic-workflow/workflow/inputs/input2.txt
+- lfn: input3.txt
+  pfns:
+  - site: local
+    pfn: /Users/ryantanaka/ISI/edge-synthetic-workflow/workflow/inputs/input3.txt

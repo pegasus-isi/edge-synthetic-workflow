@@ -1,0 +1,61 @@
+version: "3.5"
+services:
+   cm:
+      image: ryantanaka/central-manager
+      container_name: cm
+      restart: always
+      networks:
+        - condor_net
+      environment:
+        - USE_POOL_PASSWORD=yes
+        - CONDOR_HOST=cm
+   submit:
+      depends_on:
+         - cm
+      image: ryantanaka/submit
+      container_name: submit
+      restart: always
+      networks:
+         - condor_net
+      environment:
+        - USE_POOL_PASSWORD=yes
+        - CONDOR_HOST=cm
+   worker_1:
+      depends_on:
+         - cm
+      image: ryantanaka/execute
+      container_name: worker
+      restart: always
+      networks:
+         - condor_net
+      environment:
+        - MACHINE_SPECIAL_ID=1
+        - USE_POOL_PASSWORD=yes
+        - CONDOR_HOST=cm
+   worker_2:
+      depends_on:
+         - cm
+      image: ryantanaka/execute
+      container_name: worker
+      restart: always
+      networks:
+         - condor_net
+      environment:
+        - MACHINE_SPECIAL_ID=2
+        - USE_POOL_PASSWORD=yes
+        - CONDOR_HOST=cm
+   worker_3:
+      depends_on:
+         - cm
+      image: ryantanaka/execute
+      container_name: worker
+      restart: always
+      networks:
+         - condor_net
+      environment:
+        - USE_POOL_PASSWORD=yes
+        - CONDOR_HOST=cm
+networks:
+   condor_net:
+      name: condor_net
+      driver: bridge
