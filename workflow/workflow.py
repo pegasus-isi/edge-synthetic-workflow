@@ -190,7 +190,7 @@ if __name__=="__main__":
         for job_id, machine_id in JOB_MAPPINGS.items():
             print(job_id)
             if job_id in wf.jobs:
-                wf.jobs[job_id].add_condor_profile(requirements="MACHINE_ID == \"{}\"".format(machine_id))
+                wf.jobs[job_id].add_condor_profile(requirements="MACHINE_SPECIAL_ID == \"{}\"".format(machine_id))
             else:
                 raise RuntimeError("job id: {} not found in workflow when trying to assign to machine".format(
                     job_id))
