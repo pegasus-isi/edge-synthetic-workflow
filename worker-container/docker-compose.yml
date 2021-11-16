@@ -53,6 +53,7 @@ services:
       networks:
          - condor_net
       environment:
+        - MACHINE_SPECIAL_ID=3
         - USE_POOL_PASSWORD=yes
         - CONDOR_HOST=cm
 networks:
