@@ -63,6 +63,12 @@ SEC_CLIENT_ENCRYPTION = OPTIONAL
 HOSTALLOW_WRITE = *
 ALLOW_NEGOTIATOR = *
 
+# dynamic slots
+SLOT_TYPE_1 = cpus=100%,disk=100%,swap=100%,gpus=100%
+SLOT_TYPE_1_PARTITIONABLE = TRUE
+NUM_SLOTS = 1
+NUM_SLOTS_TYPE_1 = 1
+
 EOF
 
 condor_store_cred -f /etc/condor/pool_password -p kevinMalone
