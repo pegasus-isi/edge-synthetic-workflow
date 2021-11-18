@@ -24,6 +24,25 @@ RUN printf "NUM_SLOTS = 1\nNUM_SLOTS_TYPE_1 = 1\nSLOT_TYPE_1 = 100%%\nSLOT_TYPE_
 
 RUN rm /etc/condor/config.d/01-pslots.conf
 
+RUN yum install -y gcc gcc-c++ make wget pkgconfig git openssl-devel libuuid-devel gpgme-devel squashfs-tools libseccomp-devel cryptsetup
+
+RUN export VERSION=1.16.2 OS=linux ARCH=amd64 && \
+    wget https://dl.google.com/go/go$VERSION.$OS-$ARCH.tar.gz && \
+    tar -C /opt -xzvf go$VERSION.$OS-$ARCH.tar.gz && \
+    rm go$VERSION.$OS-$ARCH.tar.gz
+
+ENV GOPATH=/opt/go
+ENV PATH=/opt/go/bin:${PATH}:${GOPATH}/bin
+
+RUN export VERSION=3.7.3 && \
+    wget https://github.com/hpcng/singularity/releases/download/v${VERSION}/singularity-${VERSION}.tar.gz && \
+    tar -xzf singularity-${VERSION}.tar.gz && \
+    rm singularity-${VERSION}.tar.gz && \
+    cd singularity &&\
+    ./mconfig && \
+    make -C ./builddir && \
+    make -C ./builddir install
+
 COPY ./entrypoint.sh /usr/bin/entrypoint.sh
 RUN chmod +x /usr/bin/entrypoint.sh
 
