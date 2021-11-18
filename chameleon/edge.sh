@@ -14,6 +14,12 @@ pip install --upgrade pip
 #cat << EOF >> /etc/hosts
 #EOF
 
+############################
+### INSTALL APACHE2     ###
+############################
+apt-get install -y apache2
+a2enmod userdir
+
 ##########################
 ### INSTALL SINGULARITY ##
 ##########################
@@ -93,3 +99,11 @@ chown -R panorama:panorama /home/panorama/.ssh
 
 echo 'export GOPATH=${HOME}/go' >> /home/panorama/.bashrc
 echo 'export PATH=/usr/local/go/bin:${PATH}:${GOPATH}/bin' >> /home/panorama/.bashrc
+
+#### Add http userdir for user panorama #####
+mkdir /home/panorama/public_html
+chmod -R 755 /home/panorama/public_html
+chown -R panorama:panorama /home/panorama/public_html
+sed -i 's/.*UserDir disabled.*/\tUserDir disabled root\n\tUserDir enabled panorama/g' /etc/apache2/mods-available/userdir.conf
+
+systemctl restart apache2
