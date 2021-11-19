@@ -8,7 +8,7 @@ from typing import List
 import yaml
 from Pegasus.api import *
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 def parse_args(args: List[str] = sys.argv[1:]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Synthetic workflow")
@@ -127,6 +127,7 @@ if __name__=="__main__":
     # not concerned about failures, will stick to dev mode
     props["pegasus.mode"] = "development" 
     props["pegasus.data.configuration"] = "nonsharedfs"
+    props["pegasus.transfer.bypass.input.staging"] = "True"
     props["pegasus.monitord.encoding"] = "json"
     props["pegasus.catalog.workflow.amqp.url"] = "amqp://friend:donatedata@msgs.pegasus.isi.edu:5672/prod/workflows"
     props.write()
@@ -135,9 +136,9 @@ if __name__=="__main__":
     tc = TransformationCatalog()
     keg = Transformation(
                 "keg",
-                site="local",
+                site="condorpool",
                 pfn=args.pegasus_keg_path,
-                is_stageable=True,
+                is_stageable=False,
             )
 
     tc.add_transformations(keg)
@@ -207,10 +208,15 @@ if __name__=="__main__":
         wf.plan(
                 output_site="local",
                 sites=["condorpool"],
-                staging_sitse={"condorpool": "staging"},
+                staging_sites={"condorpool": "staging"},
                 force=True,
                 submit=True
             )
+       
+        with open("submit_dir_path.txt", "w") as f:
+            f.write(str(wf.braindump.submit_dir))
+
+    
 
 
 
