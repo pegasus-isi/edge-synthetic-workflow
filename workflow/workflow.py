@@ -126,6 +126,9 @@ if __name__=="__main__":
     props = Properties()
     # not concerned about failures, will stick to dev mode
     props["pegasus.mode"] = "development" 
+    props["pegasus.data.configuration"] = "nonsharedfs"
+    props["pegasus.monitord.encoding"] = "json"
+    props["pegasus.catalog.workflow.amqp.url"] = "amqp://friend:donatedata@msgs.pegasus.isi.edu:5672/prod/workflows"
     props.write()
 
     ### Transformations #######################################################
@@ -201,10 +204,14 @@ if __name__=="__main__":
         wf.graph(include_files=True, no_simplify=True, label="xform-id", output="workflow.png")
 
     if args.submit:
-        wf.plan(submit=True, force=True)
+        wf.plan(
+                output_site="local",
+                sites=["condorpool"],
+                staging_sitse={"condorpool": "staging"},
+                force=True,
+                submit=True
+            )
 
-    
-    
 
 
 
