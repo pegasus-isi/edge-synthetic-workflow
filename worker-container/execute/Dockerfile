@@ -43,6 +43,10 @@ RUN export VERSION=3.7.3 && \
     make -C ./builddir && \
     make -C ./builddir install
 
+# add rhel7 x86_64 pegasus-keg
+COPY ./pegasus-keg /usr/bin/pegasus-keg
+RUN chmod +x /usr/bin/pegasus-keg
+
 COPY ./entrypoint.sh /usr/bin/entrypoint.sh
 RUN chmod +x /usr/bin/entrypoint.sh
 
