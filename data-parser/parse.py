@@ -10,14 +10,43 @@ import yaml
 pp = pprint.PrettyPrinter(indent=4)
 
 def parse_args(args: List[str] = sys.argv[1:]) -> argparse.Namespace:
-    pass
+    """Parse CLI arguments"""
+
+    parser = argparse.ArgumentParser(description="submit dir parser....")
+    parser.add_argument(
+                "submit_dir",
+                type=str,
+                help="path to submit directory of interest"
+            )
+
+    parser.add_argument(
+                "-o",
+                "--output",
+                type=str,
+                default="data.yml",
+                help="filename that data will be serialized (as yaml) to, defaults to data.yml"
+            )
+    
+    args = parser.parse_args(args)
+    args.submit_dir = Path(args.submit_dir)
+    args.output = Path(args.output)
+    
+    assert args.submit_dir.exists()
+
+    return args
+
 
 def traverse_submit_dir(submit_dir_path: Path, data: Dict) -> None:
+    """
+    Traverse submit directory and build up data dict with all kickstart records
+    and file transfer attempts.
+    """
+
     def _traverse(dir: Path, data: Dict) -> None:
         for f in dir.iterdir():
             if not f.is_dir():
                 if f.match("*.out.*"):
-                    print(f.name)
+                    parse_out_file(f, data)
             else:
                 _traverse(f, data)
 
@@ -25,7 +54,9 @@ def traverse_submit_dir(submit_dir_path: Path, data: Dict) -> None:
 
 
 def parse_out_file(out_file: Path, data: Dict) -> None:
+    """Parse kickstart *.out.* file in submit directory"""
     entry = {
+            "file": out_file.name,
             "kickstart-record": None,
             "pegasus-multipart": list()
         }
@@ -66,12 +97,15 @@ def parse_out_file(out_file: Path, data: Dict) -> None:
                     )
 
         entry["kickstart-record"] = yaml.load("".join(ks_record), Loader=yaml.Loader)
-        pp.pprint(entry)
+        data[out_file.name] = entry
 
 if __name__=="__main__":
-    #traverse_submit_dir(Path("run0005"), dict())
-    parse_out_file(
-                Path("/Users/ryantanaka/ISI/edge-synthetic-workflow/data-parser/run0005/00/00/keg_merge.out.000"),
-                dict()
-            )
+    args = parse_args()
+    data = dict()
+
+    traverse_submit_dir(args.submit_dir, data)
+
+    with args.output.open("w") as f:
+        yaml.dump(data, f)
+
 
