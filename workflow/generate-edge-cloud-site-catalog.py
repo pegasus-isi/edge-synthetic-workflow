@@ -18,6 +18,7 @@ local_scratch = Directory(Directory.SHARED_SCRATCH, LOCAL_SCRATCH_DIR)
 local_scratch.add_file_servers(FileServer("file://" + LOCAL_SCRATCH_DIR, Operation.ALL))
 local.add_directories(local_storage, local_scratch)
 local.add_pegasus_profile(SSH_PRIVATE_KEY="/home/panorama/.ssh/storage_key")
+local.add_env(PEGASUS_MULTIPART_DIR=str(WORK_DIR / "pegasus.multipart.dir"))
 
 condorpool = Site("condorpool")
 condorpool.add_pegasus_profile(style="condor")
