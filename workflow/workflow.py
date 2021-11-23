@@ -14,13 +14,6 @@ def parse_args(args: List[str] = sys.argv[1:]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Synthetic workflow")
 
     parser.add_argument(
-                "--pegasus-keg-path",
-                required=True,
-                type=str,
-                help="Absolute path to pegasus-keg" 
-            )
-
-    parser.add_argument(
                 "--height",
                 required=True,
                 type=int,
@@ -60,24 +53,27 @@ def parse_args(args: List[str] = sys.argv[1:]) -> argparse.Namespace:
                         "at the 3rd and subsequent levels will have output 30MB output files."
                     ))
             )
+    
+    parser.add_argument(
+        "--edge-only",
+        default=False,
+        action="store_true",
+        help="Do not set staging_sites in wf.plan for edge only scenario AND set pegasus.transfer.links=True in properties"
+    )
 
     parser.add_argument(
-                "--replica-catalog",
-                required=True,
-                type=str,
-                default=None,
-                help=" ".join(("Absolute path to replica catalog.",
-                        "A workflow job will be created for each initial input file.",
-                        "The number of entries in the workflow catalog will determine",
-                        "the width of the workflow."
-                    ))
-            )
+        "--map-top-level-to-edge",
+        default=False,
+        action="store_true",
+        help="Map all top level jobs to edge device(s) with MACHINE_SPECIAL_ID=1"
+    )
 
     parser.add_argument(
-                "--job-mapping",
-                action="store_true",
+                "-s",
+                "--submit",
                 default=False,
-                help="Use job-machine-mapping.yml to see what jobs to map to which machines"
+                action="store_true",
+                help="Submit the workflow"
             )
 
     parser.add_argument(
@@ -89,38 +85,21 @@ def parse_args(args: List[str] = sys.argv[1:]) -> argparse.Namespace:
                 help="Generate workflow diagram as workflow.<pdf | png>"
             )
 
-    parser.add_argument(
-                "-s",
-                "--submit",
-                default=False,
-                action="store_true",
-                help="Submit the workflow"
-            )
-
     return parser.parse_args(args)
 
 if __name__=="__main__":
     args = parse_args()
 
-    # check for replica catalog
+    # replica catalog
     REPLICAS = dict()
-    if args.replica_catalog:
-        replica_catalog_path =  Path(args.replica_catalog)
-        assert replica_catalog_path.exists()
+    rc_path = Path("./replicas.yml")
+    assert rc_path.exists()
 
-        with replica_catalog_path.open("r") as f:
-            rc = yaml.load(f, Loader=yaml.Loader)
-            for input_file in rc["replicas"]:
-                assert len(input_file["pfns"]) == 1
-                REPLICAS[input_file["lfn"]] = input_file["pfns"][0]
-
-    # check for job mapping file
-    JOB_MAPPINGS = None
-    if args.job_mapping:
-        JOB_MAPPING_FILE = Path("job-machine-mapping.yml")
-        assert JOB_MAPPING_FILE.exists()
-        with JOB_MAPPING_FILE.open("r") as f:
-            JOB_MAPPINGS = yaml.load(f, Loader=yaml.Loader)
+    with rc_path.open("r") as f:
+        rc = yaml.load(f, Loader=yaml.Loader)
+        for input_file in rc["replicas"]:
+            assert len(input_file["pfns"]) == 1
+            REPLICAS[input_file["lfn"]] = input_file["pfns"][0]
 
     ### Properties ############################################################
     props = Properties()
@@ -131,6 +110,10 @@ if __name__=="__main__":
     props["pegasus.transfer.bypass.input.staging"] = "True"
     props["pegasus.monitord.encoding"] = "json"
     props["pegasus.catalog.workflow.amqp.url"] = "amqp://friend:donatedata@msgs.pegasus.isi.edu:5672/prod/workflows"
+
+    if args.edge_only:
+        props["pegasus.transfer.links"] = "True"
+
     props.write()
 
     ### Transformations #######################################################
@@ -138,7 +121,7 @@ if __name__=="__main__":
     keg = Transformation(
                 "keg",
                 site="condorpool",
-                pfn=args.pegasus_keg_path,
+                pfn="/usr/bin/pegasus-keg",
                 is_stageable=False,
             )
 
@@ -171,10 +154,19 @@ if __name__=="__main__":
             if level == 1:
                 j.add_inputs(lfn)\
                     .add_args("-T", runtime, "-i", lfn, "-o", "{}={}M".format(output_file_name, output_file_size))
+
+                if args.map_top_level_to_edge:
+                    j.add_condor_profile(requirements="MACHINE_SPECIAL_ID == 1")
+
             else:
                 input_file = "{}_{}.txt".format(level-1,col)
                 j.add_inputs(input_file)\
-                    .add_args("-T", runtime, "-i", input_file, "-o", "{}={}M".format(output_file_name, output_file_size))\
+                    .add_args("-T", runtime, "-i", input_file, "-o", "{}={}M".format(output_file_name, output_file_size))
+                
+                if args.edge_only:
+                    j.add_condor_profile(requirements="MACHINE_SPECIAL_ID == 1")
+                else:
+                    j.add_condor_profile(requirements="MACHINE_SPECIAL_ID == 0")
 
         if current_output_file_size_idx != len(args.output_sizes) - 1:
             current_output_file_size_idx += 1
@@ -188,34 +180,36 @@ if __name__=="__main__":
                     .add_args("-T", runtime, "-o", "merge.txt={}M".format(output_file_size))\
                     .add_inputs(*["{}_{}.txt".format(args.height-1, i) for i in range(1, len(REPLICAS)+1)])\
                     .add_outputs("merge.txt", stage_out=True)
+
+    if args.edge_only:
+        merge_job.add_condor_profile(requirements="MACHINE_SPECIAL_ID == 1")
+    else:
+        merge_job.add_condor_profile(requirements="MACHINE_SPECIAL_ID == 0")
+    
     wf.add_jobs(merge_job)
-
-    # map jobs to machines
-    if JOB_MAPPINGS:
-        for job_id, machine_id in JOB_MAPPINGS.items():
-            print(job_id)
-            if job_id in wf.jobs:
-                wf.jobs[job_id].add_condor_profile(requirements="MACHINE_SPECIAL_ID == {}".format(machine_id))
-            else:
-                raise RuntimeError("job id: {} not found in workflow when trying to assign to machine".format(
-                    job_id))
-
     wf.write()
     
     if args.plot:
         wf.graph(include_files=True, no_simplify=True, label="xform-id", output="workflow.png")
 
-    if args.submit:
+    if args.edge_only:
+        wf.plan(
+                output_site="local",
+                sites=["condorpool"],
+                force=True,
+                submit=args.submit
+            )
+    else:
         wf.plan(
                 output_site="local",
                 sites=["condorpool"],
                 staging_sites={"condorpool": "staging"},
                 force=True,
-                submit=True
+                submit=args.submit
             )
        
-        with open("submit_dir_path.txt", "w") as f:
-            f.write(str(wf.braindump.submit_dir))
+    with open("submit_dir_path.txt", "w") as f:
+        f.write(str(wf.braindump.submit_dir))
 
     
 
