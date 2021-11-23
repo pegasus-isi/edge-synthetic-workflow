@@ -1,7 +1,8 @@
 #!/bin/bash
 set -e
 
-python3 generate-edge-cloud-site-catalog.py
+#python3 generate-edge-cloud-site-catalog.py
+python3 generate-edge-only-site-catalog.py
 
 python3 generate-rc.py
 
