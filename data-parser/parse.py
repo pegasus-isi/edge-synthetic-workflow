@@ -107,5 +107,6 @@ if __name__=="__main__":
 
     with args.output.open("w") as f:
         yaml.dump(data, f)
-
-
+'''
+cat keg_1_2.err.000 | grep "Stats: Total" | cut -d " " -f 16
+'''

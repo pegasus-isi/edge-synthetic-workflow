@@ -126,6 +126,7 @@ if __name__=="__main__":
     props = Properties()
     # not concerned about failures, will stick to dev mode
     props["pegasus.mode"] = "development" 
+    props["pegasus.integrity.checking"] = "none"
     props["pegasus.data.configuration"] = "nonsharedfs"
     props["pegasus.transfer.bypass.input.staging"] = "True"
     props["pegasus.monitord.encoding"] = "json"
