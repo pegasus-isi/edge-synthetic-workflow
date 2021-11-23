@@ -46,58 +46,61 @@ def traverse_submit_dir(submit_dir_path: Path, data: Dict) -> None:
         for f in dir.iterdir():
             if not f.is_dir():
                 if f.match("*.out.*"):
-                    parse_out_file(f, data)
+                    parse_job_files(f, data)
             else:
                 _traverse(f, data)
 
     _traverse(submit_dir_path, data)
 
 
-def parse_out_file(out_file: Path, data: Dict) -> None:
-    """Parse kickstart *.out.* file in submit directory"""
+def parse_job_files(out_file: Path, data: Dict) -> None:
+    """Parse *.out.*  and *.err.* files in submit directory"""
     entry = {
-            "file": out_file.name,
+            "job": out_file.name.split(".")[0],
             "kickstart-record": None,
-            "pegasus-multipart": list()
+            "transfer-input": None,
+            "transfer-output": None
         }
-
-    in_multipart = False
 
     with out_file.open("r") as f:
         ks_record = list()
-        multipart_record = list()
         multipart_header = "---------pegasus-multipart"
         for line in f:
-            if not in_multipart and multipart_header in line:
-                in_multipart = True
-
-            if not in_multipart:
-                if multipart_header not in line:
-                    ks_record.append(line)
+            if multipart_header not in line:
+                ks_record.append(line)
             else:
-                if multipart_header not in line:
-                    multipart_record.append(line)
-                else:
-                    if len(multipart_record) != 0:
-                        entry["pegasus-multipart"].append(
-                                    yaml.load(
-                                        "".join(multipart_record),
-                                        Loader=yaml.Loader
-                                    )
-                                )
+                break
 
-                        multipart_record = list()
+    entry["kickstart-record"] = yaml.load("".join(ks_record), Loader=yaml.Loader)
 
-        if len(multipart_record) != 0:
-            entry["pegasus-multipart"].append(
-                        yaml.load(
-                                "".join(multipart_record),
-                                Loader=yaml.Loader
-                            )
-                    )
+    err_file = Path(out_file.name.replace(".out.", ".err.")) 
+    err_file = out_file.resolve().parent / err_file
+    transfer_input = list()
+    transfer_output = list()
+    with err_file.open("r") as f:
+        while True:
+            l = f.readline()
 
-        entry["kickstart-record"] = yaml.load("".join(ks_record), Loader=yaml.Loader)
-        data[out_file.name] = entry
+            if "Staging in input data and executables" in l:
+                while True:
+                    l = f.readline()
+                    if "[Pegasus Lite] Executing the user task" in l:
+                        break
+                    transfer_input.append(l)
+
+            if "Staging out output files" in l:
+                while "PegasusLite: " not in l:
+                    l = f.readline()
+                    transfer_output.append(l)
+
+            if l is None or l == "":
+                break
+    
+    entry["transfer-input"] = "\n".join(list(map(lambda s: s.strip(), transfer_input)))
+    entry["transfer-output"] = "\n".join(list(map(lambda s: s.strip(), transfer_output)))
+
+    data[out_file.name.split(".")[0]] = entry
+
 
 if __name__=="__main__":
     args = parse_args()
@@ -107,6 +110,3 @@ if __name__=="__main__":
 
     with args.output.open("w") as f:
         yaml.dump(data, f)
-'''
-cat keg_1_2.err.000 | grep "Stats: Total" | cut -d " " -f 16
-'''
