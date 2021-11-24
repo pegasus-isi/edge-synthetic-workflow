@@ -58,7 +58,14 @@ def parse_args(args: List[str] = sys.argv[1:]) -> argparse.Namespace:
         "--edge-only",
         default=False,
         action="store_true",
-        help="Do not set staging_sites in wf.plan for edge only scenario AND set pegasus.transfer.links=True in properties"
+        help="Do not set staging_sites in wf.plan for edge only scenario AND set pegasus.transfer.links=True in properties. Also set all jobs to run on MACHINE_SPECIAL_ID=1"
+    )
+
+    parser.add_argument(
+        "--cloud-only",
+        default=False,
+        action="store_true",
+        help="Set all jobs to run on MACHINE_SPECIAL_ID=0"
     )
 
     parser.add_argument(
@@ -155,8 +162,10 @@ if __name__=="__main__":
                 j.add_inputs(lfn)\
                     .add_args("-T", runtime, "-i", lfn, "-o", "{}={}M".format(output_file_name, output_file_size))
 
-                if args.map_top_level_to_edge:
+                if args.map_top_level_to_edge or args.edge_only:
                     j.add_condor_profile(requirements="MACHINE_SPECIAL_ID == 1")
+                elif args.cloud_only:
+                    j.add_condor_profile(requirements="MACHINE_SPECIAL_ID == 0")
 
             else:
                 input_file = "{}_{}.txt".format(level-1,col)
