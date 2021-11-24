@@ -198,7 +198,7 @@ if __name__=="__main__":
                 sites=["condorpool"],
                 force=True,
                 submit=args.submit
-            )
+            ).wait()
     else:
         wf.plan(
                 output_site="local",
@@ -206,7 +206,7 @@ if __name__=="__main__":
                 staging_sites={"condorpool": "staging"},
                 force=True,
                 submit=args.submit
-            )
+            ).wait()
        
     with open("submit_dir_path.txt", "w") as f:
         f.write(str(wf.braindump.submit_dir))
