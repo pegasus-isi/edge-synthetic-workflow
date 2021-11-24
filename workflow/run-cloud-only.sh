@@ -12,6 +12,7 @@ for i in {1..10}
 do
     echo "Doing run ${i}"
     python3 workflow.py \
+	--workflow-name "cloud" \
         --height 3 \
 	--runtime 40 20 60 \
 	--output-sizes 500 250 \

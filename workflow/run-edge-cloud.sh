@@ -13,11 +13,12 @@ do
     echo "Doing run ${i}"
 
     python3 workflow.py \
+	--workflow-name "edge-cloud" \
         --height 3 \
     	--runtime 40 20 60 \
     	--output-sizes 500 250 \
     	--map-top-level-to-edge \
-    	--submit
+	--submit
 done
 
 # watch till completion

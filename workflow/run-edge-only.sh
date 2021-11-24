@@ -13,6 +13,7 @@ do
 	echo "Doing run ${i}"
 
 	python3 workflow.py \
+	    --workflow-name "edge" \
 	    --height 3 \
 	    --runtime 40 20 60 \
 	    --output-sizes 500 250 \
