@@ -11,7 +11,16 @@ from Pegasus.api import *
 logging.basicConfig(level=logging.INFO)
 
 def parse_args(args: List[str] = sys.argv[1:]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Synthetic workflow")
+    parser = argparse.ArgumentParser(description="".join(("Synthetic workflow. Jobs assigned to the edge (MACHINE_SPECIAL_ID=1) ",
+            "will incur a 33% runtime slowdown as a penalty to represent lower powered edge devices."
+        )))
+
+    parser.add_argument(
+                "--workflow-name",
+                required=True,
+                type=str,
+                help="Name of the workflow"
+            )
 
     parser.add_argument(
                 "--height",
@@ -136,12 +145,16 @@ if __name__=="__main__":
     tc.write()
 
     ### Workflow ##############################################################
-    wf = Workflow("edge-workflow")
+    wf = Workflow(args.workflow_name)
 
     current_output_file_size_idx = 0
     current_runtime_idx = 0
     output_file_size = None
     runtime = None
+
+    def apply_runtime_penalty(runtime: int, penalty: float = 0.33333) -> int:
+        """Apply penalty to runtime"""
+        return int(runtime + (runtime * penalty))
 
     for level in range(1, args.height):
         jobs_per_level = list()
@@ -157,25 +170,27 @@ if __name__=="__main__":
                     .add_outputs(output_file_name, stage_out=False)
 
             wf.add_jobs(j)
+            j.add_inputs(lfn)
 
             if level == 1:
-                j.add_inputs(lfn)\
-                    .add_args("-T", runtime, "-i", lfn, "-o", "{}={}M".format(output_file_name, output_file_size))
 
                 if args.map_top_level_to_edge or args.edge_only:
-                    j.add_condor_profile(requirements="MACHINE_SPECIAL_ID == 1")
+                    j.add_condor_profile(requirements="MACHINE_SPECIAL_ID == 1")\
+                        .add_args("-T", apply_runtime_penalty(runtime), "-i", lfn, "-o", "{}={}M".format(output_file_name, output_file_size))
                 elif args.cloud_only:
-                    j.add_condor_profile(requirements="MACHINE_SPECIAL_ID == 0")
+                    j.add_condor_profile(requirements="MACHINE_SPECIAL_ID == 0")\
+                        .add_args("-T", runtime, "-i", lfn, "-o", "{}={}M".format(output_file_name, output_file_size))
 
             else:
                 input_file = "{}_{}.txt".format(level-1,col)
-                j.add_inputs(input_file)\
-                    .add_args("-T", runtime, "-i", input_file, "-o", "{}={}M".format(output_file_name, output_file_size))
+                j.add_inputs(input_file)
                 
                 if args.edge_only:
-                    j.add_condor_profile(requirements="MACHINE_SPECIAL_ID == 1")
+                    j.add_condor_profile(requirements="MACHINE_SPECIAL_ID == 1")\
+                        .add_args("-T", apply_runtime_penalty(runtime), "-i", input_file, "-o", "{}={}M".format(output_file_name, output_file_size))
                 else:
-                    j.add_condor_profile(requirements="MACHINE_SPECIAL_ID == 0")
+                    j.add_condor_profile(requirements="MACHINE_SPECIAL_ID == 0")\
+                        .add_args("-T", runtime, "-i", input_file, "-o", "{}={}M".format(output_file_name, output_file_size))
 
         if current_output_file_size_idx != len(args.output_sizes) - 1:
             current_output_file_size_idx += 1
@@ -186,14 +201,16 @@ if __name__=="__main__":
             runtime = args.runtime[current_runtime_idx]
 
     merge_job = Job(keg, _id="merge")\
-                    .add_args("-T", runtime, "-o", "merge.txt={}M".format(output_file_size))\
                     .add_inputs(*["{}_{}.txt".format(args.height-1, i) for i in range(1, len(REPLICAS)+1)])\
                     .add_outputs("merge.txt", stage_out=True)
 
     if args.edge_only:
-        merge_job.add_condor_profile(requirements="MACHINE_SPECIAL_ID == 1")
+        merge_job.add_condor_profile(requirements="MACHINE_SPECIAL_ID == 1")\
+                    .add_args("-T", apply_runtime_penalty(runtime), "-o", "merge.txt={}M".format(output_file_size))
     else:
-        merge_job.add_condor_profile(requirements="MACHINE_SPECIAL_ID == 0")
+        merge_job.add_condor_profile(requirements="MACHINE_SPECIAL_ID == 0")\
+                    .add_args("-T", runtime, "-o", "merge.txt={}M".format(output_file_size))\
+
     
     wf.add_jobs(merge_job)
     wf.write()
