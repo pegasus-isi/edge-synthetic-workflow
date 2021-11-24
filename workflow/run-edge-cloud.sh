@@ -8,7 +8,7 @@ python3 generate-sc.py
 python3 generate-rc.py --compute-on-edge
 
 # run workflow 
-for i in {1..2}
+for i in {1..10}
 do
     echo "Doing run ${i}"
 
