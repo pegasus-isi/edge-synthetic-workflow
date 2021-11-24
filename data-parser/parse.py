@@ -172,12 +172,41 @@ def parse_job_files(out_file: Path, data: Dict) -> None:
     entry["kickstart-record"] = parse_ks_record(entry["kickstart-record"])
     data[out_file.name.split(".")[0]] = entry
 
+def aggregate_transfer_data(data: dict) -> None:
+    time_spent_doing_data_movement = 0
+    effective_bandwidths = list()
+
+    for _, job in data.items():
+        for t in ["transfer-input", "transfer-output"]:
+            if job[t]["duration"] != None:
+                value, unit = job[t]["duration"].split(" ")
+                assert unit == "seconds"
+                time_spent_doing_data_movement += int(value)
+
+            if job[t]["rate"] != None:
+                effective_bandwidths.append(job[t]["rate"])
+
+    first_rate = effective_bandwidths[0].split(" ")[1]
+    effective_bandwidth = 0
+    for b in effective_bandwidths:
+        value, unit = b.split(" ")
+        assert first_rate == unit
+
+        effective_bandwidth += float(value)
+
+    effective_bandwidth = effective_bandwidth / len(effective_bandwidths)
+
+    data["NOT_A_JOB"] = {
+                "average-effective-bandwidth-in-MBPS": effective_bandwidth,
+                "cumulative-time-spent-doing-data-movement-in-seconds": time_spent_doing_data_movement
+            }
 
 if __name__=="__main__":
     args = parse_args()
     data = dict()
 
     traverse_submit_dir(args.submit_dir, data)
+    aggregate_transfer_data(data)
 
     with args.output.open("w") as f:
         yaml.dump(data, f)
