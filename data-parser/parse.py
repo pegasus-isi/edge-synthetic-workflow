@@ -159,11 +159,13 @@ def parse_job_files(out_file: Path, data: Dict) -> None:
         transformation = record[0]["transformation"]
         executable = record[0]["mainjob"]["executable"]["file_name"]
         wf_label = record[0]["wf-label"]
+        hostname = record[0]["hostname"]
 
         return {
             "duration": duration,
             "executable": executable,
             "transformation": transformation,
+            "hostname": hostname,
             "wf-label": wf_label
         }
 
