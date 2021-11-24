@@ -9,8 +9,8 @@ python3 generate-rc.py --compute-on-edge
 
 # run workflow 
 python3 workflow.py \
-    --height 2 \
-    --runtime 20 40 \
+    --height 3 \
+    --runtime 40 20 60 \
     --output-sizes 500 250 \
     --map-top-level-to-edge \
     --submit
