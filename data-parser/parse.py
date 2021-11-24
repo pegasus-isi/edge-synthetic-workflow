@@ -153,6 +153,21 @@ def parse_job_files(out_file: Path, data: Dict) -> None:
         entry["transfer-output"]["output"] = stage_out_xfer_output
         entry["transfer-output"].update(transfer_output_metrics)
 
+
+    def parse_ks_record(record) -> dict:
+        duration = record[0]["duration"]
+        transformation = record[0]["transformation"]
+        executable = record[0]["mainjob"]["executable"]["file_name"]
+        wf_label = record[0]["wf-label"]
+
+        return {
+            "duration": duration,
+            "executable": executable,
+            "transformation": transformation,
+            "wf-label": wf_label
+        }
+
+    entry["kickstart-record"] = parse_ks_record(entry["kickstart-record"])
     data[out_file.name.split(".")[0]] = entry
 
 
