@@ -127,7 +127,7 @@ if __name__=="__main__":
     props["pegasus.monitord.encoding"] = "json"
     props["pegasus.catalog.workflow.amqp.url"] = "amqp://friend:donatedata@msgs.pegasus.isi.edu:5672/prod/workflows"
 
-    if args.edge_only:
+    if args.edge_only or args.map_top_level_to_edge:
         props["pegasus.transfer.links"] = "True"
 
     props.write()
@@ -170,9 +170,9 @@ if __name__=="__main__":
                     .add_outputs(output_file_name, stage_out=False)
 
             wf.add_jobs(j)
-            j.add_inputs(lfn)
 
             if level == 1:
+                j.add_inputs(lfn)
 
                 if args.map_top_level_to_edge or args.edge_only:
                     j.add_condor_profile(requirements="MACHINE_SPECIAL_ID == 1")\
