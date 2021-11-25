@@ -21,7 +21,7 @@ if __name__=="__main__":
 
     rc = ReplicaCatalog()
 
-    NUM_INPUT_FILES = 8
+    NUM_INPUT_FILES = 32
 
     for i in range(1, NUM_INPUT_FILES+1):
         lfn="test{}.txt".format(i)
