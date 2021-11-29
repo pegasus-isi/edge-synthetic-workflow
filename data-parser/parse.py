@@ -92,8 +92,13 @@ def parse_job_files(out_file: Path, data: Dict) -> None:
                 "num-transfered": int(tokens[5]),
                 "amount-transfered": tokens[7] + " " + tokens[8],
                 "duration": tokens[11] + " " + tokens[12].replace(".", ""),
-                "rate": tokens[14] + " " + tokens[15]
+                "rate": tokens[14] + " " + tokens[15],
+                "src-dst": None
             }
+
+    def get_src_dst(line: str) -> str:
+        tokens = shlex.split(line)
+        return tokens[5]
 
     if "register_staging" not in out_file.name and\
             "cleanup_" not in out_file.name and\
@@ -104,10 +109,10 @@ def parse_job_files(out_file: Path, data: Dict) -> None:
         err_file = out_file.resolve().parent / err_file
 
         transfer_input = list()
-        transfer_input_metrics = None
+        transfer_input_metrics = dict()
 
         transfer_output = list()
-        transfer_output_metrics = None
+        transfer_output_metrics = dict()
 
         with err_file.open("r") as f:
             while True:
@@ -122,6 +127,9 @@ def parse_job_files(out_file: Path, data: Dict) -> None:
                         if "Stats: Total" in l:
                             transfer_input_metrics = get_xfer_stats(l)
 
+                        if "Between sites" in l:
+                            transfer_input_metrics["src-dst"] = get_src_dst(l)
+
                         transfer_input.append(l)
 
                 if "Staging out output files" in l:
@@ -130,6 +138,9 @@ def parse_job_files(out_file: Path, data: Dict) -> None:
 
                         if "Stats: Total" in l:
                             transfer_output_metrics = get_xfer_stats(l)
+
+                        if "Between sites" in l:
+                            transfer_output_metrics["src-dst"] = get_src_dst(l)
 
                         transfer_output.append(l)
 
@@ -175,6 +186,7 @@ def parse_job_files(out_file: Path, data: Dict) -> None:
 def aggregate_transfer_data(data: dict) -> None:
     time_spent_doing_data_movement = 0
     effective_bandwidths = list()
+    wan_effective_bandwidths = list()
 
     for _, job in data.items():
         for t in ["transfer-input", "transfer-output"]:
@@ -186,18 +198,36 @@ def aggregate_transfer_data(data: dict) -> None:
             if job[t]["rate"] != None:
                 effective_bandwidths.append(job[t]["rate"])
 
+            if t == "transfer-output":
+                if job["kickstart-record"]["hostname"] not in {"ccgrid-submit", "ccgrid-worker-1"}\
+                        and job[t]["src-dst"] == "condorpool->staging":
+                
+                    value, unit = job[t]["duration"].split(" ")
+
+                    wan_effective_bandwidths.append(
+                                {
+                                    "rate": job[t]["rate"],
+                                    "duration": int(value)
+                                }
+                            )
+
+
     first_rate = effective_bandwidths[0].split(" ")[1]
-    effective_bandwidth = 0
     for b in effective_bandwidths:
         value, unit = b.split(" ")
         assert first_rate == unit
 
-        effective_bandwidth += float(value)
-
-    effective_bandwidth = effective_bandwidth / len(effective_bandwidths)
+    total_wan_xfer_time = sum([d["duration"] for d in wan_effective_bandwidths])
+    wan_xfer_sums = 0
+    for d in wan_effective_bandwidths:
+        value, unit = d["rate"].split(" ")
+        duration = d["duration"]
+        assert unit == "MB/s"
+        wan_xfer_sums += ((duration / total_wan_xfer_time) * float(value))
 
     data["NOT_A_JOB"] = {
-                "average-effective-bandwidth-in-MBPS": effective_bandwidth,
+                "wan-effective-bandwidths-in-MBPS": wan_effective_bandwidths,
+                "wan-weighted-average-bandwidth-in-MBPS": wan_xfer_sums,
                 "cumulative-time-spent-doing-data-movement-in-seconds": time_spent_doing_data_movement
             }
 
