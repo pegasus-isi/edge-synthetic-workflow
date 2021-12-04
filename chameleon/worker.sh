@@ -7,6 +7,9 @@ apt-get install -y linux-headers-$(uname -r)
 apt-get install -y build-essential make zlib1g-dev librrd-dev libpcap-dev autoconf libarchive-dev iperf3 htop bmon vim wget pkg-config git python-dev python-pip libtool
 pip install --upgrade pip
 
+##### Turn off hyperthreading #####
+echo off > /sys/devices/system/cpu/smt/control
+
 ######################
 ### EDIT /etc/hosts ##
 ######################
@@ -69,6 +72,8 @@ SLOT_TYPE_1_PARTITIONABLE = TRUE
 NUM_SLOTS = 1
 NUM_SLOTS_TYPE_1 = 1
 
+MACHINE_SPECIAL_ID = 0
+STARTD_ATTRS = $(STARTD_ATTRS) MACHINE_SPECIAL_ID
 EOF
 
 condor_store_cred -f /etc/condor/pool_password -p kevinMalone
@@ -158,3 +163,5 @@ chown -R panorama:panorama /home/panorama/.ssh
 
 echo 'export GOPATH=${HOME}/go' >> /home/panorama/.bashrc
 echo 'export PATH=/usr/local/go/bin:${PATH}:${GOPATH}/bin' >> /home/panorama/.bashrc
+
+

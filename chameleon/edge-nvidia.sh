@@ -7,6 +7,9 @@ apt-get install -y linux-headers-$(uname -r)
 apt-get install -y build-essential make zlib1g-dev librrd-dev libpcap-dev autoconf libarchive-dev iperf3 htop bmon vim wget pkg-config git python-dev python-pip libtool
 pip install --upgrade pip
 
+##### Turn off hyperthreading #####
+echo off > /sys/devices/system/cpu/smt/control
+
 ############################
 ### INSTALL APACHE2     ###
 ############################
