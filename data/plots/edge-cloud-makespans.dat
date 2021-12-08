@@ -1,0 +1,4 @@
+#configuration,min,mean,max
+synthetic,514,526,536
+casa-wind,202,291.6,532
+orca,930,958.9,1087

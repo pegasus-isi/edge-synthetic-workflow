@@ -1,0 +1,4 @@
+#workflow,edge,edge-cloud,cloud
+synthetic,250,16384,32768
+casa-wind,0.8415,13.595,5914.8
+orca,1532.3,18306.3,1511.5
