@@ -1,0 +1,4 @@
+#configuration,min,mean,max
+edge,3660,3702,3720
+edge-cloud,6600,6816,7080
+cloud,12720,13230,13740
