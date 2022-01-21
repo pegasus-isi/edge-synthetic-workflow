@@ -181,3 +181,31 @@ gnuplot<<EOC
     #'' using 0:(my_val_2(\$3,\$2)):(my_label(\$3,\$2)) with labels font ",24" notitle,\
     #'' using (my_pos(\$0,1./4)):(my_val_2(\$4,\$2)):(my_label(\$4,\$2)) with labels font ",24" notitle
 EOC
+
+
+filename="condorpool_utilization_orcasound.pdf"
+gnuplot<<EOC
+    reset
+    set terminal pdf size 16,10 font 'Calibri Bold, 40'
+    set output "$filename"
+    set datafile separator ","
+    
+    #set key outside top right horizontal
+    
+    set notitle
+    set ylabel 'Number of compute slots'
+    set xlabel 'Makespan (Seconds)'
+    
+    set yrange [0:56]
+    set ytics (0, 12, 24, 36, 48)
+    #set(gca,'YTick,[0:12:48])
+
+    #set parametric
+    
+    plot 'orcasound-utilization-edge.dat' using 1:2  smooth sbezier with lines lw 6 dt 1 linecolor 2 title 'Edge',\
+         'orcasound-utilization-edge-cloud.dat' using 1:2  smooth sbezier with lines lw 6 dt 1 linecolor 1 title '[Edge]-Cloud',\
+         'orcasound-utilization-edge-cloud.dat' using 1:3  smooth sbezier with lines lw 6 dt 2 linecolor 1 title 'Edge-[Cloud]',\
+         'orcasound-utilization-cloud.dat' using 1:3  smooth sbezier with lines lw 6 dt 2 linecolor 3 title 'Cloud',\
+         'orcasound-utilization-edge.dat' using 1:4 with lines lw 6 dt 3 linecolor 'grey' title 'Max Edge Slots'
+
+EOC
