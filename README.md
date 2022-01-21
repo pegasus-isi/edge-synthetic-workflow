@@ -1,8 +1,8 @@
 # Edge Synthetic Workflow
 
+![workflow](./graph.png)
+
 This is a configurable, synthetic workflow which is used to emulate data analysis pipelines meant to run on edge-cloud hybrid infrastructures.
-
-
 
 ## Usage
 
